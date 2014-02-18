@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:View xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" title="QuickLogOut"
+		creationComplete="view1_creationCompleteHandler(event)"
+		>
+	<fx:Script>
+		<![CDATA[
+			import mx.events.FlexEvent;
+			import model.Config;
+			
+			protected function view1_creationCompleteHandler(event:FlexEvent):void
+			{
+				
+				var webView:StageWebView = new StageWebView();
+				webView.stage = stage;
+				webView.viewPort = new Rectangle(0,0,0,0);				
+				webView.loadURL("https://www.facebook.com/logout.php?access_token="+Config.access_token+"&confirm=1&next="+Config.logout);
+				webView.addEventListener(LocationChangeEvent.LOCATION_CHANGE, function():void { webView.dispose(); trace("**********************************************logged out");});
+			}
+			
+		]]> 
+	</fx:Script>	
+</s:View>

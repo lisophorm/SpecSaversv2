@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fxpProperties abbreviated="false" authoringTool="Flex Builder" compiles="true" parentProject="6993d3b6-458c-463f-83fd-6dfd6ad6ed67" projectUUID="6993d3b6-458c-463f-83fd-6dfd6ad6ed67" pureCatalystProject="false" sdkVersion="4.6.0" uuid="ff66e49e-01a9-4f93-b33c-2696d725f66e" version="15">
+  <projects/>
+  <src/>
+  <swc>
+    <linked location="sdkPlaceHolder" path="sdkPlaceHolder" position="0" uuid="ff66e49e-01a9-4f93-b33c-2696d725f66e"/>
+    <linked location="C:/Users/emirates/flash builder vodafone 2/Vodafone_BUDAPEST001/libs" path="/libs" position="1" uuid="3ceb7a33-8718-467d-a10d-48e3863a0c6e"/>
+  </swc>
+  <misc/>
+  <theme/>
+  <mxmlFormattingPrefs groupAttributesByState="true" maxLineWidth="100" mxmlAlignAttributes="true" mxmlAttributeOrder="id,userLabel,includeIn,excludeFrom,visible,x,y,z,left,right,top,bottom,width,height,minWidth,minHeight,maxWidth,maxHeight,label" mxmlKeepAttributeValuesOrganized="true"/>
+</fxpProperties>

@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:View xmlns:fx="http://ns.adobe.com/mxml/2009"
+		xmlns:s="library://ns.adobe.com/flex/spark"
+		xmlns:mx="library://ns.adobe.com/flex/mx"
+		addedToStage="onAddedToStage()"
+		removedFromStage="removed(event)" backgroundColor="0X000000">
+	<fx:Script>
+		<![CDATA[
+			import com.alfo.DelayedExecution;
+			import com.alfo.UserObject;
+			
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.validators.Validator;
+			
+			import events.KioskError;
+			import events.UserEvent;
+			import events.UserObjectEvent;
+			import events.ViewEvent;
+			
+			import com.alfo.res.Resource;
+			
+			[Bindable]
+			protected var validatorArr:Array;
+			
+			protected var currentURN:String;
+			public var optin_marketing:Boolean;
+			public var optin_terms:Boolean;
+			
+			private var theUser:UserObject;
+			
+			protected function onAddedToStage(e:Event=null):void
+			{
+				theUser=UserObject.getInstance();
+				this.navigator.addEventListener(UserObjectEvent.STATUS_CHANGE,checkNetStatus);
+				theUser.facebook=false;
+				
+				
+				if (data!=null)
+				{
+					this.currentURN = data.urn;
+					optin_marketing = data.optin_marketing;
+					optin_terms = data.optin_terms;
+					
+				} else
+				{
+					trace("NO CURRENT URN");
+				}
+				validatorArr = new Array();
+				validatorArr.push(validateName);
+				validatorArr.push(validateSurname);
+				validatorArr.push(validateEmail);
+				var tempo:DelayedExecution=new  DelayedExecution(1500,this,focusText);
+			}
+			protected function focusText() {
+				//userFirstName.setFocus();
+			}
+			protected function submit(event:MouseEvent=null):void 
+			{
+				trace("submit form");
+				theUser.isBatch=false;
+				var validatorErrorArray:Array = Validator.validateAll(validatorArr);
+				var isValidForm:Boolean = validatorErrorArray.length == 0;
+				if (isValidForm) 
+				{
+					theUser.firstname=userFirstName.text;
+					theUser.lastname=userLastName.text;
+					theUser.email=userEmail.text;
+					theUser.mobile=userMobile.text;
+					
+					if(theUser.isConnected) {
+					saveData.send({urn: this.currentURN, 
+						firstname:userFirstName.text, lastname: userLastName.text, mobile:userMobile.text, current_location:theUser.current_location,
+						email: userEmail.text, extraterms: theUser.extraterms ? 1 : 0 });
+					} else {
+						goBatch();
+					}
+					//	save();
+				} 
+			}
+			
+			
+			protected function clearForm():void
+			{
+				userEmail.text="";
+				userEmail.errorString="";
+				userFirstName.text="";
+				userFirstName.errorString="";
+				userLastName.text="";
+				userLastName.errorString="";
+				userMobile.text = "";
+				userMobile.errorString = "";
+				//this.navigator.dispatchEvent( new ViewEvent( ViewEvent.LOCATION_RESTART ));
+				
+			}
+			
+			
+			protected function save(e:ResultEvent=null):void
+			{
+				// -> Do we need to send an isRegistered? We should divide Facebook and Direct registration perhaps
+				if (e.result.result=="OK")
+				{
+					theUser.isBatch=false;
+					this.navigator.dispatchEvent( new UserEvent(UserEvent.REGISTERED, "classic"));
+					this.navigator.dispatchEvent( new ViewEvent( ViewEvent.LOCATION_NON_FACEBOOK_REGISTERED ) );
+				} else
+				{
+					this.navigator.dispatchEvent(new KioskError(KioskError.ERROR, e.result.message.toString(), "COMMUNICATION ERROR"));
+					
+				}
+			}
+			protected function error(e:FaultEvent):void
+			{
+				//this.navigator.dispatchEvent(new KioskError(KioskError.MODAL, e.fault.message.toString(), "COMMUNICATION ERROR",goBatch,submit));
+				goBatch();
+			}
+
+			protected function goBatch(e:Event=null) {
+				theUser.isBatch=true;
+				this.navigator.dispatchEvent( new UserEvent(UserEvent.REGISTERED, "classic"));
+				this.navigator.dispatchEvent( new ViewEvent( ViewEvent.LOCATION_NON_FACEBOOK_REGISTERED ) );
+			}
+			
+			
+			protected function removed(event:Event):void
+			{
+				trace("end of registration");
+				this.navigator.removeEventListener(UserObjectEvent.STATUS_CHANGE,checkNetStatus);
+				
+			}
+			protected function checkNetStatus(e:UserObjectEvent) {
+				if(e.netStatus) {
+				} else {
+				}
+			}
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+		
+		<mx:StringValidator id="validateName" minLength="2" property="text" source="{userFirstName}">
+		</mx:StringValidator>
+		<mx:StringValidator id="validateSurname" minLength="2" property="text"
+							source="{userLastName}">
+		</mx:StringValidator>
+		<mx:EmailValidator id="validateEmail" property="text" source="{userEmail}">
+		</mx:EmailValidator>
+		<mx:PhoneNumberValidator id="validateMobile" minDigits="6" property="text"
+								 source="{userMobile}">
+		</mx:PhoneNumberValidator>
+		<s:HTTPService id="saveData" fault="error(event)" method="POST" result="save(event)"
+					   resultFormat="flashvars"
+					   url="{(this.parentApplication).baseURL+'register.php'}"/>
+	</fx:Declarations>
+	<s:BorderContainer width="100%" height="100%" borderVisible="false" backgroundAlpha="0">
+		<s:BitmapImage width="100%" height="100%" scaleMode="zoom" smooth="true" smoothingQuality="high" source="{Resource.BACKGROUND}"/>
+
+			
+		
+		<s:VGroup width="100%" height="100%" horizontalAlign="center" verticalAlign="middle">
+			
+			<s:BitmapImage source="@Embed('assets/images/logo.png')"/>
+			<s:Spacer height="33"/>
+			<s:Form id="userform"  horizontalCenter="0" verticalCenter="0" backgroundAlpha="0">
+				<s:layout>
+					<s:FormLayout/>
+				</s:layout>
+				<s:FormItem fontWeight="normal" label="First name:" backgroundAlpha="0" >
+					<s:TextInput id="userFirstName" text=""  />
+				</s:FormItem>
+				
+				<s:FormItem label="Surname:">
+					<s:TextInput id="userLastName" text=""  />
+				</s:FormItem>
+				
+				<s:FormItem label="Email:" styleName="emailFormLabel" >
+					<s:TextInput id="userEmail" text="" softKeyboardType="email"  />
+				</s:FormItem>
+				
+				<s:FormItem label="Postcode:">
+					<s:TextInput id="userMobile" paddingLeft="20" softKeyboardType="default"  />
+				</s:FormItem>
+				<s:Spacer height="30" />
+				<s:HGroup width="100%" horizontalAlign="center">
+					
+					<s:Button label="CANCEL" click="clearForm()"/>
+					<s:Spacer width="20"/>
+					
+					<s:Button label="SUBMIT" click="submit(event)"/>
+				</s:HGroup>
+				
+			</s:Form>
+			
+		</s:VGroup>
+
+	</s:BorderContainer>
+</s:View>

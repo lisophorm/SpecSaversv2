@@ -1,0 +1,714 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:ViewNavigatorApplication xmlns:fx="http://ns.adobe.com/mxml/2009" 
+							xmlns:s="library://ns.adobe.com/flex/spark" firstView="views.ScanWristband" 
+							splashScreenImage="@Embed('assets/images/splashimage.png')"
+							applicationComplete="onApplicationComplete()" backgroundColor="0x000000"
+							resizeForSoftKeyboard="true" applicationDPI="320" >
+	<fx:Script>
+		<![CDATA[
+			import com.alfo.CleverUrlMonitor;
+			import com.alfo.UserObject;
+			import com.alfo.utils.GeoUtilEvent;
+			import com.alfo.utils.GeoUtils;
+			
+			import flash.events.TimerEvent;
+			import flash.sensors.Geolocation;
+			import flash.utils.Timer;
+			import com.demonsters.debugger.MonsterDebugger;
+			import mx.managers.PopUpManager;
+			
+			import spark.transitions.CrossFadeViewTransition;
+			
+			import events.ApplicationEvent;
+			import events.KioskError;
+			import events.KioskEvent;
+			import events.KioskProgressEvent;
+			import events.UserEvent;
+			import events.UserObjectEvent;
+			import events.ViewEvent;
+			
+			import model.Config;
+			import model.MonitorConnection;
+			
+			import views.ApplicationType;
+			import views.CameraCapture;
+			import views.FaceBookAuth01;
+			import views.FaceBookLogoutOverride;
+			import views.LikeApp;
+			import views.ScanWristband;
+			import views.ScoreCapture;
+			import views.SelectUserType;
+			import views.TaskCompleteCapture;
+			import views.Thankyou;
+			import views.UserForm;
+			import views.components.ErrorAlert;
+			import views.components.ModalAlert;
+			import views.components.ProgressPopUp;
+			import views.components.tandcWindow;
+			
+			
+			public var baseURL:String ="";
+			public var localURL:String ="";
+			public var facebookAppID:String ="";
+			public var urn:int = 0;
+			public var scoreFormat:String = "99:99"
+			
+			
+			protected var pref:Config;
+			protected var blinkTimer:Timer;
+			
+			
+			public static var APPLICATION_TYPE_REGISTRATION:String	 = "REGISTRATION";
+			public static var APPLICATION_TYPE_PHOTO:String			 = "PHOTOCAPTURE";
+			public static var APPLICATION_TYPE_GREENSCREEN:String	 = "GREENSCREEN";
+			public static var APPLICATION_TYPE_SIMULATOR:String		 = "SIMULATOR";
+			public static var APPLICATION_TYPE_PITSTOP:String		 = "PITSTOP";
+			public static var APPLICATION_TYPE_HELMET:String 	     = "HELMET";
+			
+			public static var APPLICATION_TYPE_RACECAR:String 	     = "RACECAR";
+			public static var APPLICATION_TYPE_WATERPOOL:String 	 = "WATERPOOL";
+			public static var APPLICATION_TYPE_COOKING:String 	     = "COOKING";
+			public static var APPLICATION_TYPE_DJ:String 	   		 = "DJ";
+			
+			
+			[Bindable]
+			public var ApplicationType:String						 = "REGISTRATION";
+			
+			[Bindable]
+			public var barcode:String = null;
+			
+			[Bindable]
+			public var score:Number = 0;
+			
+			[Bindable]
+			public var isRegistered:String = "";
+			
+			protected var optin_marketing:Boolean = false;
+			protected var optin_terms:Boolean = false;
+			
+			protected var alertbox:ErrorAlert;
+			protected var modalbox:ModalAlert;
+			protected var tcWindow:tandcWindow;
+			protected var progressWindow:ProgressPopUp;
+			
+			protected var fadeTrans:CrossFadeViewTransition = new CrossFadeViewTransition();
+			
+			private var theUser:UserObject;
+			
+			private var geo:Geolocation;	
+			
+			private var geoUtil:GeoUtils;
+			
+			protected var cleverUrlMonitor:CleverUrlMonitor;
+			
+
+			/*
+			TO DO:
+			-- COMPILATION TABLET: GOOGLE ANDRIOD - MOTOROLA XOOM 
+			
+			*/
+			function traceDisplayList(container:DisplayObjectContainer,indentString:String = ""):void
+			{
+				var child:DisplayObject;
+				for (var i:uint=0; i < container.numChildren; i++)
+				{
+					child = container.getChildAt(i);
+					trace(indentString, child, child.name); 
+					if(container.getChildAt(i) is Button) {
+						trace("************ bottooooneee");
+					}
+					if (container.getChildAt(i) is DisplayObjectContainer)
+					{
+						traceDisplayList(DisplayObjectContainer(child), indentString + "    ");
+					}
+				}
+			}
+			protected function onApplicationComplete(e:Event = null):void
+			{
+
+				trace("initialize display list");
+				traceDisplayList(this.stage);
+				theUser=UserObject.getInstance();	
+				theUser.addEventListener(UserObjectEvent.ERROR,handleOfflineError);
+				
+				trace("onApplicationComplete"+Capabilities.version);
+				
+				pref = new Config();
+				
+				trace("Submit")			
+				baseURL =  "http://"+pref.prefsXML..serverIP+"/";
+				localURL= "http://"+pref.prefsXML..localIP+"/";
+				facebookAppID = pref.prefsXML..facebookAppID;
+				ApplicationType =  pref.prefsXML..applicationtype.toUpperCase();
+				urn = int(pref.prefsXML..urnLength);
+				scoreFormat = pref.prefsXML..scoreFormat;
+				
+				cleverUrlMonitor=new CleverUrlMonitor(baseURL+"ping.php");
+				cleverUrlMonitor.addEventListener(StatusEvent.STATUS, announceStatus); 
+				cleverUrlMonitor.start();
+				
+
+				
+				if(GeoUtils.isGPSSupported()) {
+					geoUtil=new GeoUtils();
+					geoUtil.init();
+					geoUtil.checkForGPS();
+					geoUtil.addEventListener(GeoUtilEvent.LOCATION_UPDATED,updateLocation);
+				}
+				
+				
+				
+				//Display connect symbol
+				blinkTimer = new Timer( 1000 , 0 );
+				blinkTimer.addEventListener( "timer" , toggleConnectIcon);
+				blinkTimer.start();
+				
+				this.navigator.addEventListener( ApplicationEvent.SAVE_TYPE, notifyApplicationTypeUpdate );
+				
+				this.navigator.addEventListener( KioskError.ERROR, error );
+				this.navigator.addEventListener( KioskError.MODAL, modal );
+				this.navigator.addEventListener( ViewEvent.NAVIGATE, doNavigation );
+				this.navigator.addEventListener( UserEvent.URN, setBarCode );
+				this.navigator.addEventListener( UserEvent.REGISTERED, setIsRegistered);
+				this.navigator.addEventListener( UserEvent.OPTIN_MARKETING, setMarketingOptin );
+				this.navigator.addEventListener( UserEvent.OPTIN_TERMS, setTermsOptin );
+				
+				this.navigator.addEventListener( KioskEvent.TERMS_NOTIFY, openTermsAndCondtions );
+				this.navigator.addEventListener( KioskProgressEvent.NOTIFY, notifyProgress );
+				this.navigator.addEventListener( KioskProgressEvent.UPDATE, notifyProgressUpdate );
+				this.navigator.addEventListener( KioskProgressEvent.UPDATE_COMPLETE, notifyProgressComplete );
+				
+				
+			}
+			protected function handleOfflineError(e:UserObjectEvent) {
+				showError("Please check if the device memory is full:\r\n"+e.errorMsg,"Error writing on device");
+			}
+
+			private function updateLocation(e:GeoUtilEvent) {
+				trace("**************** got the event fuckyta"+e.address);
+				theUser.current_location=e.address;
+				pref.setLocationLabel(e.address);
+				pref.setPosition(e.latitude,e.longitude);
+				pref.writeXMLData();
+			}
+			
+			protected function notifyApplicationTypeUpdate( e:ApplicationEvent ):void
+			{
+				
+				pref.saveApplicationVariables( e.value );
+				trace(pref.prefsXML);
+				baseURL =  "http://"+pref.prefsXML..serverIP+"/";
+				localURL= "http://"+pref.prefsXML..localIP+"/";
+				facebookAppID = pref.prefsXML..facebookAppID;
+				ApplicationType = pref.prefsXML..applicationtype.toString().toUpperCase();
+				urn = int(pref.prefsXML..urnLength);
+				scoreFormat = pref.prefsXML..scoreFormat;
+				
+				this.navigator.dispatchEvent( new ViewEvent( ViewEvent.LOCATION_RESTART ));
+			}
+			
+			protected function clearPopups(e:Event=null):void
+			{
+				try
+				{
+					trace("*** CLEARING POPUPS");
+					if (alertbox!=null)
+					{
+						if (!alertbox.isRemoving)
+							PopUpManager.removePopUp(alertbox);
+						
+					}
+					if (modalbox!=null)
+					{
+						if (!modalbox.isRemoving)
+							PopUpManager.removePopUp(modalbox);
+						
+					}
+					if (tcWindow!=null)
+					{
+						if (!tcWindow.isRemoving)
+							PopUpManager.removePopUp(tcWindow);
+						
+					}
+					if (progressWindow!=null)
+					{
+						PopUpManager.removePopUp(progressWindow);
+						
+					}
+				} catch (error:Error)
+				{
+					trace("*** Error clearing popup - probably when user presses close:\n"+error.message)
+				}
+				
+			}
+			protected function notifyProgressComplete( e:KioskProgressEvent = null):void
+			{
+				clearPopups();
+			}
+			
+			protected function notifyProgress( e:KioskProgressEvent = null):void
+			{
+				
+				clearPopups();
+				
+				progressWindow = new ProgressPopUp();
+				progressWindow.windowTitle = e.title;
+				progressWindow.message = e.message;
+				progressWindow.exitFunction = e.exitFunction;
+				
+				PopUpManager.addPopUp(progressWindow, this, true);
+				PopUpManager.centerPopUp(progressWindow);
+			}
+			
+			protected function notifyProgressUpdate( e:KioskProgressEvent = null):void
+			{
+				
+				
+				if (progressWindow==null)
+				{
+					notifyProgress(e);
+					
+				} else
+				{
+					progressWindow.message = e.message;
+				}
+				
+			}
+			protected function openTermsAndCondtions( e:KioskEvent = null):void
+			{
+				trace("openTermsAndCondtions");
+				
+				clearPopups();
+				tcWindow = new tandcWindow();
+				tcWindow.exitFunction = e.exitFunction;
+				
+				PopUpManager.addPopUp(tcWindow, this, true);
+				PopUpManager.centerPopUp(tcWindow);
+			}
+			//NAVIGATION HANDLING BETWEEN VIEWS
+			protected function doNavigation(e:ViewEvent):void
+			{
+				trace(e.location);
+				cleverUrlMonitor.checkIt();
+				clearPopups();
+				
+				
+				switch (e.location)
+				{
+					case ViewEvent.LOCATION_RESTART:
+						this.navigator.popToFirstView(fadeTrans);
+						break;
+					case ViewEvent.LOCATION_CONFIG:
+						this.navigator.pushView( views.ApplicationType, { xml : pref.prefsXML } );
+						break;
+					case ViewEvent.LOCATION_SELECT_USER_TYPE:
+						if (this.isRegistered)
+						{
+							if (this.ApplicationType == APPLICATION_TYPE_REGISTRATION)
+							{
+								ScanWristband(this.navigator.activeView).init();
+								showError("YOU HAVE ALREADY REGISTERED.", "USER REGISTERED");
+								
+							} else 
+							{
+								this.navigator.dispatchEvent( new ViewEvent( ViewEvent.LOCATION_GAME ));
+							}
+						} else
+						{
+							this.navigator.pushView(views.SelectUserType);
+						}
+						break;
+					case ViewEvent.LOCATION_FACEBOOK:
+						if (!isFacebookRegistered)
+						{
+							this.navigator.pushView(views.FaceBookAuth01, {urn: barcode,  optin_marketing: this.optin_marketing, optin_terms: this.optin_terms});
+						} else
+						{
+							this.navigator.dispatchEvent( new ViewEvent( ViewEvent.LOCATION_GAME ));
+						}
+						break;
+					case ViewEvent.LOCATION_STANDARD_REGISTRATION:
+						if (!isStandardRegistered)
+						{
+							this.navigator.pushView(views.UserForm, {urn: barcode, optin_marketing: this.optin_marketing, optin_terms: this.optin_terms});
+						} else
+						{
+							
+							this.navigator.dispatchEvent( new ViewEvent( ViewEvent.LOCATION_GAME ));
+							
+						}
+						break;
+					case ViewEvent.LOCATION_FACEBOOK_REGISTERED:
+						trace("User has registered on facebook");
+						this.navigator.dispatchEvent( new UserEvent(UserEvent.REGISTERED, "facebook"));
+						this.navigator.dispatchEvent( new ViewEvent( ViewEvent.LOCATION_REGISTRATION_COMPLETE ));
+						
+						//	this.navigator.pushView(views.ExtraInfo, {urn: barcode});
+						break;
+					case ViewEvent.LOCATION_TEAM_SELECTED:
+						trace("Attempting to pop current view from NavigationView");
+						this.navigator.popView();
+						
+						break;
+					
+					
+					case ViewEvent.LOCATION_REGISTRATION_COMPLETE:
+						trace("Registration of user is complete");
+						/*
+						*
+						*  redirect to 'like' page
+						*
+						*/
+						
+						if (this.ApplicationType == APPLICATION_TYPE_REGISTRATION)
+						{
+							
+							this.navigator.pushView(views.Thankyou, {urn: barcode});
+						} else
+						{
+							this.navigator.dispatchEvent( new ViewEvent( ViewEvent.LOCATION_LIKE_APP ));
+							//this.navigator.dispatchEvent( new ViewEvent( ViewEvent.LOCATION_GAME ));
+						}
+						
+						break;
+					
+					case ViewEvent.LOCATION_NON_FACEBOOK_REGISTERED:
+						trace("Non facebook registration complete");
+						this.navigator.dispatchEvent( new ViewEvent( ViewEvent.LOCATION_GAME ));
+						
+						break;
+					
+					
+					case ViewEvent.LOCATION_FACEBOOK_FORCELOGOUT:
+						this.navigator.pushView(views.FaceBookLogoutOverride, {urn: barcode});
+						
+						break;
+					
+					case ViewEvent.LOCATION_LIKE_APP:
+						this.navigator.pushView(views.LikeApp);
+						break;
+					
+					case ViewEvent.LOCATION_GAME:
+						
+						
+						trace("ENTERING THE GAME "+ApplicationType);
+						if (ApplicationType == APPLICATION_TYPE_PHOTO)
+						{
+							this.navigator.pushView(views.CameraCapture, {urn: barcode, type: ApplicationTypeNumber, facebook: this.isFacebookRegistered});
+							/*if (this.isFacebookRegistered)
+							{
+							this.navigator.pushView(views.CameraCapture, {urn: barcode, type: ApplicationTypeNumber, facebook: this.isFacebookRegistered});
+							} else
+							{
+							this.navigator.popToFirstView();
+							this.navigator.pushView( views.ScanWristband, null, null, fadeTrans );
+							showError("USER NOT REGISTERED WITH FACEBOOK ACCOUNT", "FACEBOOK ACCOUNT REQUIRED", this.defaultView);
+							}*/
+						} else if  (ApplicationType == APPLICATION_TYPE_PITSTOP || ApplicationType == APPLICATION_TYPE_SIMULATOR 
+							|| ApplicationType == APPLICATION_TYPE_RACECAR || ApplicationType == APPLICATION_TYPE_WATERPOOL || ApplicationType == APPLICATION_TYPE_DJ)
+						{
+							this.navigator.pushView(views.ScoreCapture, {urn: barcode, type: ApplicationTypeNumber, facebook: this.isFacebookRegistered, activityTitle: this.activityTitle,  scoreFormat: this.scoreFormat});
+						} else if  (ApplicationType == APPLICATION_TYPE_GREENSCREEN)
+						{
+							
+							showError("GREEN SCREEN ACTIVTIY", "NOT IMPLEMENTED ON TABLETS");
+							//							this.navigator.pushView(views.GreenscreenCapture, {urn: barcode, type: ApplicationTypeNumber, facebook: this.isFacebookRegistered});
+							
+						} else if  (ApplicationType == APPLICATION_TYPE_HELMET || ApplicationType == APPLICATION_TYPE_COOKING)
+						{
+							
+							
+							//showError("GAME: BRAND AMBASSADOR TAKES NOTES DOWN WHEN USER COMPLETES AN ACTIVITY", "NOT IMPLEMENTED");
+							this.navigator.pushView(views.TaskCompleteCapture, {urn: barcode, type: ApplicationTypeNumber, facebook: this.isFacebookRegistered, activityTitle: this.activityTitle});
+							
+						} else 
+						{
+							this.navigator.popToFirstView();
+							this.navigator.pushView( views.ScanWristband );
+							showError("UNKNOWN ACTIVTIY", "NOT IMPLEMENTED");
+							
+						}
+						break;
+					case ViewEvent.LOCATION_GAME_COMPLETE:
+						this.navigator.pushView(views.Thankyou);
+						
+						break;
+					default:
+						
+				}
+				
+				
+				
+			}
+			protected function error(e:KioskError=null):void
+			{
+				trace("Error: "+e.message);
+				showError(e.message, e.title, e.exitFunction);
+			}
+			protected function modal(e:KioskError=null):void
+			{
+				trace("Modal: "+e.message);
+				showModal(e.message, e.title, e.exitFunction,e.retryFunction);
+			}
+			protected function toggleConnectIcon(e:TimerEvent):void
+			{
+				if ( connStatus.visible )
+				{            
+					connStatus.visible = false;                
+				} else if (!cleverUrlMonitor.available) 
+				{            
+					connStatus.visible = true;                
+				}     
+			}
+			
+			protected function notifyIdle(e:Event):void
+			{
+				//defaultState();
+				defaultView();
+				trace("Idle too long - resetting");
+			}
+			
+			function announceStatus(e:StatusEvent):void { 
+				trace("Status change. Current status: " + cleverUrlMonitor.available); 
+				theUser.isConnected=cleverUrlMonitor.available;
+				var gino:UserObjectEvent;
+				gino= new UserObjectEvent(UserObjectEvent.STATUS_CHANGE,cleverUrlMonitor.available);
+				this.navigator.dispatchEvent(gino);
+			} 
+			
+			protected function checkInternet(e:Event) {
+				var gino:MonitorConnection=e as MonitorConnection;
+				trace("CHECK INTERNET");
+			}
+			protected function notifyNoInternet(e:Event):void
+			{
+				trace("notify no internet");
+				//defaultState();
+				defaultView();
+				cleverUrlMonitor.removeEventListener( MonitorConnection.EVENT_INTERNET_NOT_AVAILABLE, notifyNoInternet);
+				cleverUrlMonitor.addEventListener( MonitorConnection.EVENT_INTERNET_AVAILABLE, notifyInternet);
+				showError("SORRY - NO INTERNET CONNECTION", "CONNECTION ERROR");
+				
+			}
+			protected function notifyInternet(e:Event):void
+			{
+				trace("notify internet")
+				//var gino:UserObjectEvent= new UserObjectEvent(UserObjectEvent.ONLINE);
+				//this.navigator.dispatchEvent(gino);
+				
+				cleverUrlMonitor.addEventListener( MonitorConnection.EVENT_INTERNET_NOT_AVAILABLE, notifyNoInternet);
+				cleverUrlMonitor.removeEventListener( MonitorConnection.EVENT_INTERNET_AVAILABLE, notifyInternet);
+				
+				
+				if (alertbox!=null)
+				{
+					if (alertbox.windowTitle == "CONNECTION ERROR")
+					{
+						PopUpManager.removePopUp(alertbox);
+						/*
+						if (currentState == "Scan")
+						{
+						if (highscore!=null)
+						{
+						highscore.init();
+						}
+						}
+						*/
+					}
+				}
+				
+			}
+			protected function showError(msg:String="", title:String="", exitFunction:Function=null):void
+			{
+				//Alert.show(msg, title, 4, null, exitFunction);
+				
+				clearPopups();
+				alertbox = new ErrorAlert();
+				alertbox.message = msg;
+				alertbox.windowTitle = title;
+				alertbox.exitFunction = exitFunction;
+				PopUpManager.addPopUp(alertbox, this, true);
+				PopUpManager.centerPopUp(alertbox);
+				
+			}
+			protected function showModal(msg:String="", title:String="", exitFunction:Function=null,retryFunction:Function=null):void
+			{
+				//Alert.show(msg, title, 4, null, exitFunction);
+				
+				clearPopups();
+				modalbox = new ModalAlert();
+				modalbox.message = msg;
+				modalbox.windowTitle = title;
+				modalbox.exitFunction = exitFunction;
+				modalbox.retryFunction = retryFunction;
+				
+				PopUpManager.addPopUp(modalbox, this, true);
+				PopUpManager.centerPopUp(modalbox);
+				
+			}
+			protected function defaultView(e:Event=null):void
+			{
+			
+				this.stage.setAspectRatio(StageAspectRatio.LANDSCAPE);
+				this.navigator.dispatchEvent( new ViewEvent( ViewEvent.LOCATION_RESTART ));
+				
+			}
+			protected function config(event:MouseEvent=null):void
+			{
+				this.navigator.dispatchEvent( new ViewEvent( ViewEvent.LOCATION_CONFIG ));
+			}
+			protected function exit(event:MouseEvent=null):void
+			{
+				NativeApplication.nativeApplication.exit();
+			}
+			protected function setBarCode(e:UserEvent):void
+			{
+				barcode = e.urn;
+				trace("recorded barcode:"+barcode);
+			}
+			protected function setScore(e:UserEvent):void
+			{
+				score = e.score;
+			}
+			protected function setIsRegistered(e:UserEvent):void
+			{
+				this.isRegistered =  (e.userType)
+				
+				trace("recorded isRegistered: "+this.isRegistered.toString());
+			}
+			public function get isFacebookRegistered():Boolean
+			{
+				return this.isRegistered =="facebook";
+			}
+			public function get isStandardRegistered():Boolean
+			{
+				return this.isRegistered =="classic";
+			}
+			public function get activityTitle():String
+			{
+				switch (this.ApplicationType)
+				{
+					case APPLICATION_TYPE_PITSTOP:
+						return "Pit Stop Challenge";
+						break;
+					case APPLICATION_TYPE_SIMULATOR:
+						return "Simulator";
+						break;
+					case APPLICATION_TYPE_RACECAR:
+						return "Race the racecar";
+						break;
+					case APPLICATION_TYPE_WATERPOOL:
+						return "Virtual waterpool";
+						break;
+					case APPLICATION_TYPE_COOKING:
+						return "Gastro cooking";
+						break;
+					case APPLICATION_TYPE_DJ:
+						return "Dj course";
+						break;
+					case APPLICATION_TYPE_HELMET:
+						return "Bungee Run";
+						break;
+					
+					default:
+						return "";
+				}
+			}
+			
+			protected function get ApplicationTypeNumber():int
+			{
+				switch (this.ApplicationType)
+				{
+					case APPLICATION_TYPE_PITSTOP:
+						return 2;
+						break;
+					case APPLICATION_TYPE_SIMULATOR:
+						return 1;
+						break;
+					case APPLICATION_TYPE_PHOTO:
+						return 3;
+						break;
+					case APPLICATION_TYPE_HELMET:
+						return 0;
+						break;
+					case APPLICATION_TYPE_GREENSCREEN:
+						return 4;
+						break;
+					case APPLICATION_TYPE_RACECAR:
+						return 5;
+						break;
+					case APPLICATION_TYPE_WATERPOOL:
+						return 6;
+						break;
+					case APPLICATION_TYPE_COOKING:
+						return 7;
+						break;
+					case APPLICATION_TYPE_DJ:
+						return 8;
+						break;
+					default:
+						return -1;
+				}
+			}
+			
+			
+			protected function setMarketingOptin( e:UserEvent ):void
+			{
+				optin_marketing = e.optin_marketing
+			}
+			protected function setTermsOptin( e:UserEvent ):void
+			{
+				optin_terms = e.optin_terms
+			}
+			
+			protected function takephoto_clickHandler(event:MouseEvent):void
+			{
+				if (CameraUI.isSupported)
+				{
+					trace("camera is supported");
+					var myCam:CameraUI = new CameraUI();
+					myCam.launch(MediaType.IMAGE);
+					//myCam.addEventListener(MediaEvent.COMPLETE,takePhotoCompleteHandler);
+					
+				}
+				else
+				{
+					trace("camera not supported");
+					
+					this.navigator.dispatchEvent(new KioskError(KioskError.ERROR, "CAMERA NOT SUPPORTED", "DEVICE ERROR"));
+					
+				}
+				
+			}
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+		
+	</fx:Declarations>
+	<fx:Style source="assets/css/Fonts.css" />
+	<fx:Style source="assets/css/Main.css" />
+	
+	
+	
+	<s:navigationContent>		
+		<s:HGroup verticalAlign="middle">
+			<s:Button id="takephoto" icon="assets/images/core/camera_icon.png" click="takephoto_clickHandler(event)" color="0xFFFFFF" />
+			<s:Label text="SUNGLASS HUT PHOTO UPLOADER" color="0xFFFFFF" fontSize="24" paddingLeft="10" />
+		</s:HGroup>
+	</s:navigationContent>
+	<s:actionContent>
+		<s:HGroup verticalAlign="middle">
+			
+			
+			<s:Button icon="assets/images/core/nm-no-connection.gif" id="connStatus" label="NO CONNECTION" color="0xFFFFFF" visible="false" />
+			<s:Button label="Quit" click="exit(event)"  color="0xFFFFFF" />
+			<s:Button label="Config" click="config(event)" color="0xFFFFFF" />
+		
+			<s:Button icon="assets/images/core/home.png" click="{defaultView()}"/>
+		</s:HGroup>
+		
+	</s:actionContent>
+	
+</s:ViewNavigatorApplication>

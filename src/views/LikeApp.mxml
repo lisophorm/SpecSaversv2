@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:View xmlns:fx="http://ns.adobe.com/mxml/2009"
+		xmlns:s="library://ns.adobe.com/flex/spark"
+		xmlns:components="views.components.*"
+		xmlns:components2="com.flexcapacitor.components.*"
+		addedToStage="view1_addedToStageHandler(event)"
+		removedFromStage="view1_removedFromStageHandler(event)" skinClass="skins.BarView"
+		title=""
+		creationComplete="view1_creationCompleteHandler(event)"
+		>
+	
+	<fx:Script>
+		<![CDATA[
+			import com.alfo.DelayedExecution;
+			import com.alfo.res.Resource;
+			
+			import mx.events.FlexEvent;
+			import mx.events.MoveEvent;
+			import mx.events.ResizeEvent;
+			
+			import events.KioskError;
+			import events.ViewEvent;
+			
+			import model.Config;
+			
+			protected var pref:Config;
+			
+			private var disposedLikeWeb:Boolean=true;
+			
+			//private var webView:StageWebView;
+			private var stageweb:StageWebView=new StageWebView();
+			
+			protected function view1_addedToStageHandler(event:Event):void
+			{				
+				
+				stageweb.viewPort = new Rectangle(0, 0, 200, 200);
+				if(Capabilities.screenDPI>300) {
+					
+				}
+				
+			}
+			
+			protected function view1_removedFromStageHandler(event:Event):void
+			{
+				trace("DISPOSE LIKE VIEW");
+				if(stageweb!=null) {
+					stageweb.dispose();
+					stageweb=null;
+				}
+				
+				
+			}
+			
+			protected function takePhoto(event:MouseEvent = null):void
+			{
+				stageweb.stage=null;
+				stageweb.removeEventListener(LocationChangeEvent.LOCATION_CHANGE,onURLChange);	
+				this.navigator.dispatchEvent( new ViewEvent( ViewEvent.LOCATION_GAME ) );
+			}
+			
+			
+			
+			private function on_complete(e : Event):void{  
+				trace("complete");
+			}
+			
+
+			
+
+			
+			protected function view1_creationCompleteHandler(event:FlexEvent):void
+			{
+				
+				pref = new Config();
+				
+				stageweb.addEventListener(ErrorEvent.ERROR, onURLError );
+				stageweb.loadURL("http://"+pref.prefsXML..serverIP+"/likelink.php?random="+String(Math.random()));
+				stageweb.addEventListener(LocationChangeEvent.LOCATION_CHANGE, onURLChange);
+
+				
+				
+				
+				
+			}
+			protected function onURLError(event:ErrorEvent):void
+			{
+				stageweb.removeEventListener(ErrorEvent.ERROR, onURLError );
+				stageweb.removeEventListener(LocationChangeEvent.LOCATION_CHANGE, onURLChange);
+
+				this.navigator.dispatchEvent( new ViewEvent( ViewEvent.LOCATION_GAME ) );
+				stageweb.stage=null;
+				
+			}
+			protected function onURLChange(event:Event):void
+			{
+				trace("onURLChange: "+stageweb.location);
+				if(stageweb.location.indexOf("likelink.php")==-1){
+					var tempo:DelayedExecution=new  DelayedExecution(2000,this,exitLike);
+
+				}
+			}
+			protected function exitLike() {
+				this.navigator.dispatchEvent( new ViewEvent( ViewEvent.LOCATION_GAME ) );
+				stageweb.stage=null;
+				
+			}
+			
+			protected function placo_resizeHandler(event:ResizeEvent=null):void
+			{
+			
+				var punto:Point=placo.contentToGlobal(new Point(0,0));
+				trace("resize like webview"+punto.x+"-"+ punto.y);
+				stageweb.viewPort = new Rectangle(punto.x, punto.y, placo.width, placo.height);
+
+				
+			}
+			
+			protected function placo_moveHandler(event:MoveEvent=null):void
+			{
+				
+				var punto:Point=placo.contentToGlobal(new Point(0,0));
+				trace("move like webview"+punto.x+"-"+ punto.y);
+				stageweb.viewPort = new Rectangle(punto.x, punto.y, placo.width, placo.height);
+			}
+			
+			protected function placo_creationCompleteHandler(event:FlexEvent):void
+			{
+				trace("placo coords:"+placo.x+"-"+placo.y);
+				if(Capabilities.screenDPI>300) {
+					placo.width*=2;
+					placo.height*=2;
+				}
+				var punto:Point=placo.contentToGlobal(new Point(0,0));
+				trace("placo absolute coords:"+punto.x+"-"+ punto.y);
+				var tempo:DelayedExecution=new DelayedExecution(2000,this,resizeLike);
+				
+			}
+			protected function resizeLike() {
+				stageweb.stage=stage;
+				trace("placo coords:"+placo.x+"-"+placo.y);
+				var punto:Point=placo.contentToGlobal(new Point(0,0));
+				trace("placo absolute coords after 3 secs:"+punto.x+"-"+ punto.y);
+				placo_moveHandler();
+			}
+			
+		]]>
+	</fx:Script>
+	
+	
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<s:BorderContainer width="100%" height="100%" borderVisible="false" backgroundColor="0x000000">
+		<s:BitmapImage width="100%" height="100%" scaleMode="zoom" smooth="true" smoothingQuality="high" source="{Resource.BACKGROUND}"/>
+		<s:VGroup width="100%" height="100%" verticalAlign="middle" horizontalAlign="center" >
+	<s:BitmapImage source="@Embed('assets/images/logo.png')"/>
+			<s:Spacer height="70"/>
+			<s:HGroup>
+				<s:Label fontFamily="Ultracomp CFF" text="PLEASE" color="0xFFFFFF" fontSize="70" />
+				<s:Label fontFamily="Ultracomp CFF" text="LIKE" color="0xF383C3" fontSize="70" />
+				<s:Label fontFamily="Ultracomp CFF" text=" THE SUNGLASS HUT FANPAGE" color="0xFFFFFF" fontSize="70" />
+			</s:HGroup>
+	
+			<s:Spacer height="70"/>	
+				<s:HGroup verticalAlign="middle">
+				<s:BorderContainer backgroundColor="#FFFFFF" height="73" borderVisible="false" width="239" id="placo" creationComplete="placo_creationCompleteHandler(event)" resize="placo_resizeHandler(event)" move="placo_moveHandler(event)"/>
+				<s:Button width="239" height="73" label="CONTINUE" click="takePhoto(event)" horizontalCenter="0"
+						  verticalCenter="0"/> 
+				</s:HGroup>
+			</s:VGroup>
+
+	</s:BorderContainer>
+</s:View>

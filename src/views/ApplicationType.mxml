@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:View xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" title="Configuration"
+		creationComplete="onCreationCompleteHandler(event)" backgroundColor="0x000000"  remove="view1_removeHandler(event)" >
+	<fx:Script>
+		<![CDATA[
+			import com.alfo.DelayedExecution;
+			import com.alfo.UserObject;
+			import com.alfo.utils.FTPCopy;
+			
+			import mx.events.FlexEvent;
+			
+			import events.ApplicationEvent;
+			import events.KioskError;
+			import events.ViewEvent;
+			
+			private var ftpCopy:FTPCopy;
+			private var file:File;
+			import com.alfo.utils.StringUtils;
+			private var theUser:UserObject;
+			
+			protected function onCreationCompleteHandler(event:FlexEvent):void
+			{
+				theUser = UserObject.getInstance();
+				var tempo:DelayedExecution=new DelayedExecution(1000,this,refresh);
+				var tempo:DelayedExecution=new DelayedExecution(1001,this,refresh1);
+				if (data!=null)
+				{
+					this.localserver.text=data.xml.localIP;
+					this.server.text = data.xml.serverIP;
+					this.facebookAPI_ID.text = data.xml.facebookAppID;
+					this.urnLength.text = data.xml.urnLength;
+					this.scoreFormat.text = data.xml.scoreFormat;
+					this.radioGroup.selectedValue = data.xml.applicationtype;
+					
+				}
+				
+			}
+			function refresh() {
+				trace("invalidaaaaaaa");
+				scoreFormat.invalidateDisplayList();
+				urnLength.invalidateDisplayList();
+				urnLength.setFocus();
+				
+			}
+			function refresh1() {
+				trace("invalidaaaaaaa2");
+				scoreFormat.invalidateDisplayList();
+				urnLength.invalidateDisplayList();
+				submitButton.setFocus();
+				
+			}
+			
+			
+			protected function submit(e:MouseEvent):void
+			{
+				
+				this.navigator.dispatchEvent( new ApplicationEvent( ApplicationEvent.SAVE_TYPE, { serverIP: server.text.toString(),
+					facebookAppID: facebookAPI_ID.text.toString(), 
+					urnLength: urnLength.text.toString(), 
+					applicationtype: radioGroup.selectedValue.toString(),
+					scoreFormat: scoreFormat.text.toString(),localIP:localserver.text.toString()} ) );
+				
+			}
+			protected function cancel(e:MouseEvent):void
+			{
+				this.navigator.dispatchEvent( new ViewEvent(ViewEvent.LOCATION_RESTART ));
+			}
+			protected function forceLogout(e:MouseEvent):void
+			{
+				this.navigator.dispatchEvent( new ViewEvent(ViewEvent.LOCATION_FACEBOOK_FORCELOGOUT ));
+			}
+			
+			protected function forcePrint_clickHandler(event:MouseEvent):void
+			{
+				file= File.applicationDirectory.resolvePath("assets/images/blankshot.jpg");
+				if(file.exists) {
+					trace("file exists!");
+				var destFile:File=File.documentsDirectory.resolvePath(theUser.tempPath+File.separator+"blank_"+StringUtils.generateRandomString(4)+".jpg");
+					try {
+						file.copyTo(destFile,true);
+					} catch(e:Error){
+						trace("******** error saving file"+e.message);
+						this.navigator.dispatchEvent( new KioskError(KioskError.ERROR, e.message, "I/O error, check SD Card available space" ) );
+					} finally {
+						trace("file copied");
+					}
+				} else {
+					trace("****** blank file does not exists");
+				}
+				ftpCopy=new FTPCopy(destFile,this.parentApplication.localURL+"upload.php");
+				ftpCopy.addEventListener(IOErrorEvent.IO_ERROR,handleLocalError);
+				ftpCopy.addEventListener(Event.COMPLETE,onCompleteLocal);
+				ftpCopy.start();
+			}
+			private function handleLocalError(e:IOErrorEvent) {
+				this.navigator.dispatchEvent(new KioskError(KioskError.ERROR, "The local server appears to be offline. Please check the laptop and the wireless connection", "ERROR SENDING TO PRINTER"));
+			}
+			private function onCompleteLocal(e:Event) {
+				trace("photo uoloded locally");
+			}
+			
+			protected function view1_removeHandler(event:FlexEvent):void
+			{
+				if(ftpCopy != null) {
+					if(ftpCopy.hasEventListener(IOErrorEvent.NETWORK_ERROR)) {
+						ftpCopy.removeEventListener(IOErrorEvent.NETWORK_ERROR,handleLocalError);
+						ftpCopy.removeEventListener(Event.COMPLETE,onCompleteLocal);
+					}
+					ftpCopy=null;
+				}
+				
+			}
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->						
+		<s:RadioButtonGroup id="radioGroup" />
+		
+	</fx:Declarations>
+	
+	
+	<s:Scroller width="100%" height="100%">
+
+			
+			
+			<s:VGroup horizontalAlign="center" verticalAlign="middle" width="100%" height="100%">
+				<s:Form id="configform" horizontalCenter="0" verticalCenter="0" backgroundColor="0x000000">
+					<s:layout>
+						<s:FormLayout/>
+					</s:layout>
+					<s:FormHeading label="CONFIGURATION DETAILS:" />
+					
+					<s:FormItem width="365" label="Server name:" fontFamily="Arial">
+						<s:TextInput id="server" width="500"  color="0x000000" fontFamily="Arial"/>
+					</s:FormItem>
+					<s:FormItem width="365" label="Local server:" fontFamily="Arial">
+						<s:TextInput id="localserver" width="500"  color="0x000000" fontFamily="Arial"/>
+					</s:FormItem>
+					
+					<s:HGroup>
+						<s:FormItem width="365" label="URN Length:" >
+							<s:TextInput id="urnLength" width="80" color="0x000000"   fontFamily="Arial"/>
+						</s:FormItem>
+						<s:FormItem width="365" label="Score format:" >
+							<s:TextInput id="scoreFormat" width="80" color="0x000000"   fontFamily="Arial"/>
+						</s:FormItem>
+					</s:HGroup>
+					
+					<s:FormItem width="365" label="Facebook appID:" >
+						<s:TextInput id="facebookAPI_ID" width="400" color="0x000000" softKeyboardType="number"  fontFamily="Arial"/>
+					</s:FormItem>
+					<s:FormItem width="365" label="Application:">
+						<s:HGroup>
+							<s:VGroup>
+								<s:RadioButton width="100%" skinClass="spark.skins.mobile.RadioButtonSkin" label="Registration Only" value="registration" group="{radioGroup}" />
+								<s:RadioButton width="100%" skinClass="spark.skins.mobile.RadioButtonSkin" label="Pit Stop Challenge" value="pitstop" group="{radioGroup}" visible="false" includeInLayout="false" />
+								<s:RadioButton width="100%" skinClass="spark.skins.mobile.RadioButtonSkin" label="Simulator" value="simulator" group="{radioGroup}" visible="false" includeInLayout="false" />
+								<s:RadioButton width="100%" skinClass="spark.skins.mobile.RadioButtonSkin" label="Photo capture" value="photocapture" group="{radioGroup}" />
+								<s:RadioButton width="100%" skinClass="spark.skins.mobile.RadioButtonSkin" label="Green screen" value="greenscreen" group="{radioGroup}" visible="false" includeInLayout="false" />
+							</s:VGroup>
+							<s:VGroup>
+								<s:RadioButton width="100%" skinClass="spark.skins.mobile.RadioButtonSkin" label="Bungee Run" value="helmet" group="{radioGroup}" />
+								<s:RadioButton width="100%" skinClass="spark.skins.mobile.RadioButtonSkin" label="Race the Racecar" value="racecar" group="{radioGroup}" visible="false" includeInLayout="false" />
+								<s:RadioButton width="100%" skinClass="spark.skins.mobile.RadioButtonSkin" label="Virtual waterpool" value="waterpool" group="{radioGroup}" visible="false" includeInLayout="false" />
+								<s:RadioButton width="100%" skinClass="spark.skins.mobile.RadioButtonSkin" label="Gastro cooking" value="cooking" group="{radioGroup}" visible="false" includeInLayout="false" />
+								<s:RadioButton width="100%" skinClass="spark.skins.mobile.RadioButtonSkin" label="Dj course" value="dj" group="{radioGroup}" visible="false" includeInLayout="false" />
+								
+							</s:VGroup>
+						</s:HGroup>
+						
+						
+					</s:FormItem>
+				</s:Form>
+				<s:HGroup verticalAlign="middle">
+					<s:Button x="259" y="591" label="Cancel" click="cancel(event)"/>
+					<s:Spacer y="8" width="568" height="24"/>
+					<s:Button id="submitButton" x="909" y="591" label="Submit" click="submit(event)" />
+					<s:Button label="Force print" id="forcePrint" click="forcePrint_clickHandler(event)" />
+				</s:HGroup>
+				
+				
+			</s:VGroup>
+
+	</s:Scroller>
+</s:View>

@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:View xmlns:fx="http://ns.adobe.com/mxml/2009" backgroundColor="0x000000"
+		xmlns:s="library://ns.adobe.com/flex/spark" creationComplete="init(event)" removedFromStage="view1_removedFromStageHandler(event)" xmlns:components="views.components.*" xmlns:mx="library://ns.adobe.com/flex/mx">
+	<fx:Script>
+		<![CDATA[
+			import com.alfo.UserObject;
+			import com.alfo.res.Resource;
+			import com.alfo.utils.FTPCopy;
+			
+			import mx.events.FlexEvent;
+			import mx.validators.Validator;
+			
+			import events.KioskError;
+			import events.KioskEvent;
+			import events.UserEvent;
+			import events.UserObjectEvent;
+			import events.ViewEvent;
+			
+			
+			protected var validatorArr:Array;
+			protected var alfo:UserObject;
+			
+			var timer:Timer;
+			
+			[Bindable]
+			private var groupWidth:Number;
+			
+			
+			protected function init( e:FlexEvent = null ):void
+			{
+				groupWidth=normalbut.width;
+				//this.navigator.addEventListener(UserObjectEvent.STATUS_CHANGE,checkNetStatus);
+				trace("opening  welcome screen");
+				alfo=UserObject.getInstance();
+				
+				
+				validatorArr = new Array();
+				validatorArr.push(validateTerms);
+				//checkNetStatus();
+				//validatorArr.push(validateMarketing);
+				if(Capabilities.screenDPI>300) {
+					rezScreen.scaleX=rezScreen.scaleY=1.3;
+				}
+				
+				this.navigator.addEventListener(UserObjectEvent.STATUS_CHANGE,checkNetStatus);
+				
+			}
+			protected function checkNetStatus(e:UserObjectEvent) {
+				trace("net status event inside userselect");
+				if(alfo.isConnected) {
+					faceBtn.visible=true;
+					faceSpacer.visible=true;
+					faceBtn.includeInLayout=true;
+					faceSpacer.includeInLayout=true;
+					normalbut.label="I DON’T HAVE A FACEBOOK ACCOUNT";
+				} else {
+					faceBtn.visible=false;
+					faceSpacer.visible=false;
+					faceBtn.includeInLayout=false;
+					faceSpacer.includeInLayout=false;
+					normalbut.label="REGISTER USING EMAIL";
+				}
+			}
+			protected function isValid():Boolean
+			{
+				var validatorErrorArray:Array = Validator.validateAll(validatorArr);
+				if(validatorErrorArray.length !=0) {
+					this.navigator.dispatchEvent( new KioskError(KioskError.ERROR, "You must agree to the terms and conditions in order to proceed", "ERROR"));
+				}
+				return validatorErrorArray.length == 0;
+			}
+			
+			protected function facebook(e:Event=null):void
+			{
+				if (isValid())
+				{  
+					this.parentApplication.dispatchEvent( new UserEvent( UserEvent.OPTIN_TERMS, termsCheck.selected ? "true" : "false" ))
+					//this.parentApplication.dispatchEvent( new UserEvent( UserEvent.OPTIN_MARKETING, marketCheck.selected ? "true" : "false" ))
+					this.navigator.dispatchEvent( new ViewEvent( ViewEvent.LOCATION_FACEBOOK ));
+				}
+			}
+			protected function standard(e:Event=null):void
+			{
+				if (isValid())
+				{
+					this.parentApplication.dispatchEvent( new UserEvent( UserEvent.OPTIN_TERMS, termsCheck.selected ? "true" : "false" ))
+					//this.parentApplication.dispatchEvent( new UserEvent( UserEvent.OPTIN_MARKETING, marketCheck.selected ? "true" : "false" ))
+					this.navigator.dispatchEvent( new ViewEvent( ViewEvent.LOCATION_STANDARD_REGISTRATION ));
+				}
+			}
+			
+			protected function tandcd_clickHandler(event:MouseEvent):void
+			{
+				this.navigator.dispatchEvent(new KioskEvent(KioskEvent.TERMS_NOTIFY));
+			}
+			
+			protected function view1_removedFromStageHandler(event:Event):void
+			{
+				this.navigator.removeEventListener(UserObjectEvent.STATUS_CHANGE,checkNetStatus);
+				trace("clising welcome screen");
+				
+			}
+			
+			protected function extraCheck_clickHandler(event:MouseEvent):void
+			{
+				alfo.extraterms=!extraCheck.selected;
+				
+			}
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+		<mx:StringValidator id="validateTerms"
+							source="{termsCheck}"
+							required="true"
+							property="selected" maxLength="4" requiredFieldError="You must agree the terms of use" tooLongError="You must agree to the Terms of Use.">
+		</mx:StringValidator>
+		<!-- mx:StringValidator id="validateMarketing"
+		source="{marketCheck}"
+		required="true"
+		property="selected" maxLength="4" requiredFieldError="{ML.t('You must accept marketing approach from Vodafone.')}" tooLongError="You must accept marketing approach from Vodafone.">
+		</mx:StringValidator-->
+	</fx:Declarations>
+	<s:BorderContainer width="100%" height="100%" borderVisible="false" backgroundColor="0x000000">
+		<s:BitmapImage width="100%" height="100%" scaleMode="zoom" smooth="true" smoothingQuality="high" source="{Resource.BACKGROUND}"/>
+		
+		<s:VGroup horizontalAlign="center" verticalAlign="middle" width="100%" height="100%">
+			<s:BitmapImage source="@Embed('assets/images/logo.png')"/>
+			<s:Spacer height="45" />
+			<s:VGroup id="rezScreen" horizontalAlign="center">
+				<s:VGroup horizontalAlign="center" >
+					
+					
+					<s:VGroup width="{groupWidth}" horizontalAlign="right">
+						<s:HGroup horizontalAlign="center" verticalAlign="middle" width="100%" paddingBottom="10" >
+							
+							<s:HGroup horizontalAlign="right" width="{largeText.width}">
+								
+							<s:Label fontSize="22" styleName="smallprint"
+									 text="I agree with the" paddingTop="10" />
+							<s:Label fontSize="22" click="tandcd_clickHandler(event)"
+									 styleName="smallprintLink" text="Terms and Conditions" paddingTop="10"
+									 />
+							</s:HGroup>
+							<s:Spacer width="10"/>
+							<s:CheckBox id="termsCheck" label=""
+										color="#000000" skinClass="skins.vodafoneCheckBox" width="36"/>
+							
+							
+							
+						</s:HGroup>
+						<s:Rect width="{groupWidth}" height="2" >
+							<s:fill>
+								<s:SolidColor color="#E28CBB" />
+							</s:fill>
+						</s:Rect>
+						<s:HGroup horizontalAlign="center" verticalAlign="top" paddingTop="10" width="{groupWidth}">
+							
+							
+							<s:Label id="largeText" fontSize="22" styleName="smallprint" textAlign="right" lineBreak="toFit"
+									 text="Sunglass Hut would love to give you £10 off your next purchase, details of VIP events and special offers. Please check this box if you don’t want us to contact you." paddingTop="10" width="{groupWidth-extraCheck.width-10}" />
+							<s:Spacer width="10" id="termsSpacer"/>
+							<s:CheckBox id="extraCheck" label="" color="#000000" skinClass="skins.vodafoneCheckBox" width="36" click="extraCheck_clickHandler(event)" selected="false"/>
+							
+							
+							
+						</s:HGroup>
+					</s:VGroup>
+				</s:VGroup>
+				
+				<s:Spacer height="45" />
+				<components:facebookBtn id="faceBtn"  click="facebook()"  />
+				<s:Spacer height="15" id="faceSpacer" />
+				<s:Button id="normalbut" label="I DON’T HAVE A FACEBOOK ACCOUNT" fontSize="16" click="standard()" />
+				<s:Spacer height="35" />
+				
+				
+				
+				
+			</s:VGroup>
+			
+			
+		</s:VGroup>
+	</s:BorderContainer>
+</s:View>

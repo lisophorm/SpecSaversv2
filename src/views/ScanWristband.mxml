@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:View xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" title=""
+		addedToStage="init(event)" 
+		removedFromStage="remove(event)"
+		skinClass="skins.BarView" 
+		remove="exit(event)" xmlns:components="views.components.*">
+	<fx:Script>
+		<![CDATA[
+			import com.alfo.UserObject;
+			import com.alfo.res.Resource;
+			import com.alfo.utils.StringUtils;
+			
+			import flash.display.StageDisplayState;
+			import flash.events.Event;
+			import flash.events.FocusEvent;
+			import flash.events.MouseEvent;
+			import flash.events.SoftKeyboardEvent;
+			
+			import mx.events.FlexEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.InvokeEvent;
+			
+			import spark.events.TextOperationEvent;
+			
+			import events.KioskError;
+			import events.KioskEvent;
+			import events.UserEvent;
+			import events.ViewEvent;
+			
+			import model.Config;
+			
+			private var currentUrn:String;
+			
+			private var restartInterval:Number;
+			private var pref:Config;
+			
+			private var currentURN:String;
+			private var checking:Boolean=false;
+			
+			[Bindable]
+			public var barcode:String = null;
+			
+			[Bindable]
+			public var gameNumber:String = "1";
+			
+			private var theUser:UserObject;
+			
+			
+			
+			protected function urn_changeHandler(event:TextOperationEvent):void
+			{
+				trace("check urn");
+				
+			}
+			
+			protected function urn_focusOutHandler(event:FocusEvent):void
+			{
+				//focusManager.setFocus(urn);
+				//urn.selectAll();
+				trace("focus out handler");
+			}
+			
+			protected function urn_softKeyboardActivatingHandler(event:SoftKeyboardEvent):void
+			{
+				event.preventDefault();
+				
+			}
+			
+			protected function clearFunc():void {
+				clearInterval(restartInterval);
+				
+			}
+			
+			
+			public function init(event:Event=null):void
+			{
+				pref= new Config();
+				theUser=UserObject.getInstance();
+				var tempo:Boolean=theUser.isConnected;
+				trace("enter welcome screen");
+				theUser.init();
+				theUser.current_location=pref.getLocationLabel();
+				theUser.isConnected=tempo;
+
+				StageDisplayState.FULL_SCREEN_INTERACTIVE;
+				//	trace("init barcode reader "+systemManager.stage.hasEventListener(KeyboardEvent.KEY_DOWN).toString());
+				
+				//if (!systemManager.stage.hasEventListener(KeyboardEvent.KEY_DOWN))
+				//systemManager.stage.addEventListener(KeyboardEvent.KEY_DOWN, checkKey);
+				
+				try
+				{
+					barcodeInput.text = barcode = "";
+					barcodeWriter.text ="";
+					barcodeInput.enabled = true;
+					barcodeWriter.visible = true;
+					getBarcodeFocus();
+					
+				} catch (er:Error)
+				{
+					trace("Warning: "+er.message.toString());
+				}
+				
+			}
+			
+			
+			protected function exit(e:FlexEvent=null):void
+			{
+				
+				
+			}
+
+			
+			protected function timeOutFailed(event:mx.rpc.events.InvokeEvent):void
+			{
+				//this.navigator.dispatchEvent(new events.KioskError(KioskError.ERROR,event.toString(), "Timeout"));
+				
+			}
+			
+			protected function getBarcodeFocus(e:Event=null):void
+			{
+				//trace("set focus")
+				//barcodeWriter.setFocus();
+			}
+			
+			
+			public function restart(e:Event=null):void
+			{
+				this.stage.focus=null;
+				
+			}
+			
+			protected function httpservice1_faultHandler(event:FaultEvent):void
+			{
+				checking=false;
+				this.navigator.dispatchEvent(new KioskError(KioskError.ERROR, "Network error, please check connectivity and try again: " + event.fault.faultString, "NETWORK ERROR", restart));
+				
+			}
+			
+			protected function cazzoFunc(event:Event):void 
+			{
+				trace("cazzo");
+			}
+			protected function tandcd_clickHandler(event:MouseEvent):void
+			{
+				trace("tandcd clickhandler");
+				this.navigator.dispatchEvent(new KioskEvent(KioskEvent.TERMS_NOTIFY, restart));
+			}
+			
+			protected function generate_urn(event:MouseEvent):void
+			{
+				barcode=StringUtils.generateRandomString(10);
+				theUser.urn=barcode;
+				trace("current urn:"+theUser.urn);
+				this.navigator.dispatchEvent( new UserEvent(UserEvent.URN, barcode));
+				this.navigator.dispatchEvent( new UserEvent(UserEvent.REGISTERED));
+				this.navigator.dispatchEvent(new ViewEvent(ViewEvent.LOCATION_SELECT_USER_TYPE));
+			}
+			
+			protected function remove(event:Event):void
+			{
+				trace("exit welcome screen");
+				
+			}
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+		<!--s:HTTPService id="checkURN" resultFormat="flashvars" method="POST" url="http://www.ignitesocial.co.uk/ignite/checkuser.php" result="httpservice1_resultHandler(event)" fault="httpservice1_faultHandler(event)" /-->
+	</fx:Declarations>
+	<s:BorderContainer width="100%" height="100%" borderVisible="false">
+		<s:VGroup width="100%" height="100%" horizontalAlign="center" verticalAlign="middle">
+			<s:BitmapImage width="100%" height="100%" scaleMode="zoom" smooth="true" smoothingQuality="high" source="{Resource.BACKGROUND_HOME}"/>
+		</s:VGroup>
+		<s:VGroup width="100%" height="100%" horizontalAlign="left" verticalAlign="middle" paddingLeft="30">
+			<s:Label text="STYLE IT OUT" fontSize="180" color="0xF383C3"  fontFamily="Ultracomp CFF"  />
+			<s:Label text="SUNGLASS HUT" fontSize="106" color="0x8A8A8D"  fontFamily="Ultracomp CFF"  />
+			<s:Spacer height="180"/>
+			
+			<s:Button label="BEGIN" click="generate_urn(event)"/>
+			
+			
+		</s:VGroup>	
+	</s:BorderContainer>
+	<s:TextInput id="barcodeWriter" top="-50" addedToStage="getBarcodeFocus()" visible="false" includeInLayout="false" text="" textAlign="left" softKeyboardActivating="urn_softKeyboardActivatingHandler(event)"/>
+	<s:TextInput id="barcodeInput" includeInLayout="true" visible="false"  addedToStage="getBarcodeFocus()"  text="" textAlign="left"/>
+
+</s:View>

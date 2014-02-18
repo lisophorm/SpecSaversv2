@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:s="library://ns.adobe.com/flex/spark"
+		 xmlns:fx="http://ns.adobe.com/mxml/2009"
+		 xmlns:ai="http://ns.adobe.com/ai/2009"
+		 xmlns:d="http://ns.adobe.com/fxg/2008/dt"
+		 xmlns:flm="http://ns.adobe.com/flame/2008"
+		 width="380" height="126">
+	<s:RichText d:id="171"
+				d:userLabel="THANK YOU Please visit Mission Control  to see you..." x="0"
+				y="0" width="380" height="126" ai:aa="2" color="#FFFFFF" columnCount="1"
+				fontFamily="Frutiger 65" fontWeight="bold" kerning="on" lineHeight="27"
+				tabStops="S73.6306381225586 S147.261276245117 S220.891914367676 S294.522552490234 S368.153190612793"
+				flm:variant="174" whiteSpaceCollapse="preserve">
+		<s:content><s:p fontSize="65" lineHeight="61"><s:span>THANK YOU</s:span></s:p><s:p fontSize="27.92" trackingRight="2%"><s:span lineHeight="36">Please visit Mission Contro</s:span><s:span lineHeight="30">l </s:span><s:br/><s:span lineHeight="30" trackingRight="0">to see your energy snapshot</s:span></s:p></s:content>
+	</s:RichText>
+</s:Group>

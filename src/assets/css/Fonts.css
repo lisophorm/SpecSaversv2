@@ -1,0 +1,58 @@
+@font-face
+{
+	fontFamily: "Font Rg";
+	src: url("/assets/fonts/SGH Medium-Regular.otf");
+	embedAsCFF: false;
+	fontWeight:normal;
+}
+@font-face
+{
+	fontFamily: "Font Rg CFF";
+	src: url("/assets/fonts/SGH Medium-Regular.otf");
+	embedAsCFF: true;
+}
+
+@font-face
+{
+	fontFamily: "Font Bd";
+	src: url("/assets/fonts/SGH Medium-Regular.otf");
+	fontWeight:bold;
+}
+
+@font-face
+{
+	fontFamily: "Font Bd CFF";
+	src: url("/assets/fonts/SGH Medium-Regular.otf");
+	embedAsCFF: true;
+	fontWeight:bold;
+}
+
+@font-face
+{
+	fontFamily: "Font Light";
+	src: url("/assets/fonts/SGH Light-Regular.otf");
+	embedAsCFF: false;
+}
+@font-face
+{
+	fontFamily: "Font Light CFF";
+	src: url("/assets/fonts/SGH Light-Regular.otf");
+	embedAsCFF: true;
+}
+
+@font-face
+{
+	fontFamily: "Ultracomp CFF";
+	src: url("/assets/fonts/SGH UltComp-Regular.otf");
+	fontWeight:normal;
+	embedAsCFF: true;
+	typographicCase:uppercase;
+}
+
+@font-face
+{
+	fontFamily: "Ultracomp";
+	src: url("/assets/fonts/SGH UltComp-Regular.otf");
+	embedAsCFF: true;
+	typographicCase:uppercase;
+}

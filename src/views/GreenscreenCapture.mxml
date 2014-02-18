@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:View xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		xmlns:s="library://ns.adobe.com/flex/spark" title="GreenscreenCapture">
+	<fx:Script>
+		<![CDATA[
+				import flash.display.MovieClip;
+				import flash.events.Event;
+				import flash.events.IOErrorEvent;
+				import flash.events.ProgressEvent;
+				import flash.net.Socket;
+				
+					
+					protected var conn:Socket;
+					
+					public function run():void 
+					{
+						// constructor code
+						conn = new Socket(); 
+						conn.addEventListener( Event.CONNECT, onSocketOpen ); 
+						conn.addEventListener( ProgressEvent.SOCKET_DATA, onSocketData ); 
+						conn.addEventListener(IOErrorEvent.IO_ERROR, onSocketError );
+						conn.connect( 'localhost', 5050 ); 
+					}
+					
+					
+					
+					protected function onSocketError( e:IOErrorEvent ) : void
+					{ 
+						trace("IO ERROR:"+e.text);
+					}
+					
+					protected function onSocketOpen( e:Event ) :void
+					{ 
+						conn.writeUTFBytes( "/Applications/Adobe\ Photoshop\ CS5/Adobe\ Photoshop\ CS5.app"); //<<-- send command 
+						//conn.writeUTFBytes( "testDroplet.app test.png"); //<<-- send command 
+						
+						conn.flush(); 
+					} 
+					
+					protected function onSocketData( e:Event ):void
+					{ 
+						var data:String = conn.readUTFBytes( conn.bytesAvailable ); 
+						conn.close(); 
+					} 
+					
+
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<s:Button label="Run Script" click="run()" />
+</s:View>

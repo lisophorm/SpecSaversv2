@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Skin xmlns:fx="http://ns.adobe.com/mxml/2009"
+		xmlns:s="library://ns.adobe.com/flex/spark">
+	
+	<fx:Metadata>
+		[HostComponent("spark.components.ActionBar")]
+	</fx:Metadata>
+	
+	<s:states>
+		<s:State name="titleContentWithActionAndNavigation"/>
+		<s:State name="titleContentWithNavigation"/>
+		<s:State name="titleContentWithAction"/>
+		<s:State name="titleContent"/>
+		<s:State name="titleWithActionAndNavigation"/>
+		<s:State name="titleWithNavigation"/>
+		<s:State name="titleWithAction"/>
+		<s:State name="title"/>
+	</s:states>
+	
+	<s:BitmapImage source="@Embed('/assets/images/actionbar.png')"
+			 left="0" width="103%" height="100%" scaleMode="stretch" smooth="true" smoothingQuality="high"
+			 right="0" 
+			/>
+
+	
+	<s:Group id="navigationGroup"
+			 left="12"
+			 top="10"/>
+	
+	<s:Group id="titleGroup"
+			 left="10"
+			 top="68"/>
+	
+	<s:Group id="actionGroup"
+			 right="12"
+			 top="5"/>
+	
+	<s:Label id="titleDisplay"
+			 horizontalCenter="0"
+			 top="8"/>
+</s:Skin>

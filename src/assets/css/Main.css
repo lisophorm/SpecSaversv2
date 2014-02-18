@@ -1,0 +1,89 @@
+/* CSS file */
+@namespace s "library://ns.adobe.com/flex/spark";
+@namespace mx "library://ns.adobe.com/flex/mx";
+
+
+global
+{
+	/*
+	text-align: center;
+	content-background-color: #000000;
+	*/
+}
+s|Label  {
+	fontSize: 44.5;
+	fontFamily: "Font Rg CFF";
+	color: #2D023C
+	
+}
+
+.verysmallprint {
+	fontSize: 14;
+	fontFamily: "Font Rg CFF";
+	color:#E28CBB;
+
+}
+.smallprint {
+	fontSize: 21;
+	fontFamily: "Font Rg CFF";
+	color:#FFFFFF;
+}
+.smallprintLink {
+	fontSize: 21;
+	fontFamily: "Font Rg CFF";
+	color:#E28CBB;
+}
+s|FormHeading s|Label#labelDisplay {
+	fontSize: 32;
+	fontFamily: "Font Rg CFF";
+	color: #FFFFFF;
+	fontWeight: normal;
+}
+
+s|FormItem s|Label#labelDisplay {
+	fontSize: 32;
+	fontFamily: "Font Rg CFF";
+	color: #FFFFFF;
+	fontWeight: normal;
+}
+s|VGroup.Game s|Label
+{
+	fontSize: 32;
+	fontFamily: "Font Rg CFF";
+	textAlign: left;
+	color: #000000;
+}
+s|VGroup.Game s|Label.heading
+{
+	fontSize: 32;
+	fontFamily: "Font Rg CFF";
+	textAlign: left;
+	color: #E28CBB;
+}
+s|Button {
+	skinClass: ClassReference("skins.CustomButton");
+}
+
+
+s|FormItem {
+	backgroundAlpha:0;
+	skinClass:ClassReference("skins.CustomFormItem")
+}
+
+
+s|RadioButton {
+	skinClass: ClassReference("views.components.RadioButtonSkin1");
+	
+}
+s|Scroller {
+	skinClass:ClassReference("skins.AngryScroller");
+}
+s|ActionBar {
+	skinClass:ClassReference("skins.AngryActionBar");
+}
+.thankyou
+{
+	fontFamily: "Font Rg";
+	fontWeight:bold;
+	fontSize: 150;
+}
